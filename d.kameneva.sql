@@ -1,14 +1,46 @@
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
 SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
 SET client_min_messages = warning;
+SET row_security = off;
 
 DROP DATABASE IF EXISTS "d.kameneva";
 
-CREATE DATABASE "d.kameneva" WITH ENCODING = 'UTF8';
+CREATE DATABASE "d.kameneva" WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'Russian_Russia.1251' LC_CTYPE = 'Russian_Russia.1251';
+
+ALTER DATABASE "d.kameneva" OWNER TO postgres;
 
 \connect "d.kameneva"
 
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
 SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
 SET client_min_messages = warning;
+SET row_security = off;
+
+
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = public, pg_catalog;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+
 
 
 
@@ -19,6 +51,9 @@ CREATE TABLE brightness (
 );
 
 
+ALTER TABLE brightness OWNER TO postgres;
+
+
 CREATE SEQUENCE brightness_brightness_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -27,12 +62,10 @@ CREATE SEQUENCE brightness_brightness_id_seq
     CACHE 1;
 
 
+ALTER TABLE brightness_brightness_id_seq OWNER TO postgres;
+
+
 ALTER SEQUENCE brightness_brightness_id_seq OWNED BY brightness.brightness_id;
-
-ALTER TABLE ONLY brightness ALTER COLUMN brightness_id SET DEFAULT nextval('brightness_brightness_id_seq'::regclass);
-
-
-
 
 
 CREATE TABLE catalogues (
@@ -41,9 +74,15 @@ CREATE TABLE catalogues (
     year_of_publ date,
     numofobj integer,
     abbreviation text,
+    CONSTRAINT catalogues_abbreviation_check CHECK ((length(abbreviation) < 30)),
+    CONSTRAINT catalogues_catalogue_name_check CHECK ((length(catalogue_name) < 80)),
     CONSTRAINT catalogues_numofobj_check CHECK ((numofobj > 1000)),
     CONSTRAINT catalogues_year_of_publ_check CHECK (((year_of_publ >= '1900-01-01'::date) AND (year_of_publ <= ('now'::text)::date)))
 );
+
+
+ALTER TABLE catalogues OWNER TO postgres;
+
 
 
 CREATE SEQUENCE catalogues_catalogue_id_seq
@@ -54,19 +93,22 @@ CREATE SEQUENCE catalogues_catalogue_id_seq
     CACHE 1;
 
 
+ALTER TABLE catalogues_catalogue_id_seq OWNER TO postgres;
+
+
 ALTER SEQUENCE catalogues_catalogue_id_seq OWNED BY catalogues.catalogue_id;
-
-ALTER TABLE ONLY catalogues ALTER COLUMN catalogue_id SET DEFAULT nextval('catalogues_catalogue_id_seq'::regclass);
-
-
-
 
 
 
 CREATE TABLE constellations (
     constellation_id integer NOT NULL,
-    constellation_name text NOT NULL
+    constellation_name text NOT NULL,
+    CONSTRAINT constellations_constellation_name_check CHECK ((length(constellation_name) < 30))
 );
+
+
+ALTER TABLE constellations OWNER TO postgres;
+
 
 
 CREATE SEQUENCE constellations_constellation_id_seq
@@ -77,20 +119,24 @@ CREATE SEQUENCE constellations_constellation_id_seq
     CACHE 1;
 
 
+ALTER TABLE constellations_constellation_id_seq OWNER TO postgres;
+
+
+
 ALTER SEQUENCE constellations_constellation_id_seq OWNED BY constellations.constellation_id;
-
-
-ALTER TABLE ONLY constellations ALTER COLUMN constellation_id SET DEFAULT nextval('constellations_constellation_id_seq'::regclass);
-
-
 
 
 
 
 CREATE TABLE star_types (
     star_type_id integer NOT NULL,
-    type_name text NOT NULL
+    type_name text NOT NULL,
+    CONSTRAINT star_types_type_name_check CHECK ((length(type_name) < 30))
 );
+
+
+ALTER TABLE star_types OWNER TO postgres;
+
 
 
 CREATE SEQUENCE star_types_star_type_id_seq
@@ -101,13 +147,10 @@ CREATE SEQUENCE star_types_star_type_id_seq
     CACHE 1;
 
 
+ALTER TABLE star_types_star_type_id_seq OWNER TO postgres;
+
 
 ALTER SEQUENCE star_types_star_type_id_seq OWNED BY star_types.star_type_id;
-
-ALTER TABLE ONLY star_types ALTER COLUMN star_type_id SET DEFAULT nextval('star_types_star_type_id_seq'::regclass);
-
-
-
 
 
 
@@ -119,26 +162,12 @@ CREATE TABLE stars (
     variable_star boolean NOT NULL,
     star_type_id integer,
     constellation_id integer,
-    CONSTRAINT stars_variable_star_check CHECK ((variable_star = ANY (ARRAY[true, false])))
+    CONSTRAINT stars_spectral_type_check CHECK ((length(spectral_type) < 30)),
+    CONSTRAINT stars_star_name_check CHECK ((length(star_name) < 30))
 );
 
 
-CREATE SEQUENCE stars_star_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-
-ALTER SEQUENCE stars_star_id_seq OWNED BY stars.star_id;
-
-
-ALTER TABLE ONLY stars ALTER COLUMN star_id SET DEFAULT nextval('stars_star_id_seq'::regclass);
-
-
-
+ALTER TABLE stars OWNER TO postgres;
 
 
 
@@ -148,6 +177,7 @@ CREATE TABLE stars_brightness_relationships (
 );
 
 
+ALTER TABLE stars_brightness_relationships OWNER TO postgres;
 
 
 
@@ -158,6 +188,39 @@ CREATE TABLE stars_catalogues_relationships (
 );
 
 
+ALTER TABLE stars_catalogues_relationships OWNER TO postgres;
+
+
+
+CREATE SEQUENCE stars_star_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE stars_star_id_seq OWNER TO postgres;
+
+
+ALTER SEQUENCE stars_star_id_seq OWNED BY stars.star_id;
+
+
+
+
+ALTER TABLE ONLY brightness ALTER COLUMN brightness_id SET DEFAULT nextval('brightness_brightness_id_seq'::regclass);
+
+
+ALTER TABLE ONLY catalogues ALTER COLUMN catalogue_id SET DEFAULT nextval('catalogues_catalogue_id_seq'::regclass);
+
+
+ALTER TABLE ONLY constellations ALTER COLUMN constellation_id SET DEFAULT nextval('constellations_constellation_id_seq'::regclass);
+
+
+ALTER TABLE ONLY star_types ALTER COLUMN star_type_id SET DEFAULT nextval('star_types_star_type_id_seq'::regclass);
+
+
+ALTER TABLE ONLY stars ALTER COLUMN star_id SET DEFAULT nextval('stars_star_id_seq'::regclass);
 
 
 
@@ -186,6 +249,7 @@ COPY brightness (brightness_id, visible_mag) FROM stdin;
 22	-0.72
 23	-1.46
 \.
+
 
 SELECT pg_catalog.setval('brightness_brightness_id_seq', 23, true);
 
@@ -228,7 +292,10 @@ COPY constellations (constellation_id, constellation_name) FROM stdin;
 18	Cygni
 \.
 
+
+
 SELECT pg_catalog.setval('constellations_constellation_id_seq', 18, true);
+
 
 
 
@@ -244,7 +311,9 @@ COPY star_types (star_type_id, type_name) FROM stdin;
 9	unknown
 \.
 
+
 SELECT pg_catalog.setval('star_types_star_type_id_seq', 9, true);
+
 
 
 COPY stars (star_id, star_name, spectral_type, variable_star, star_type_id, constellation_id) FROM stdin;
@@ -274,8 +343,6 @@ COPY stars (star_id, star_name, spectral_type, variable_star, star_type_id, cons
 24	Shaula	B1.5IV	t	1	13
 25	Gacrux	M3.5III	t	1	11
 \.
-
-SELECT pg_catalog.setval('stars_star_id_seq', 25, true);
 
 
 
@@ -308,57 +375,59 @@ COPY stars_brightness_relationships (star_id, brightness_id) FROM stdin;
 \.
 
 
+
+
 COPY stars_catalogues_relationships (star_id, catalogue_id, numincat) FROM stdin;
-1	1	1	48915
-2	2	1	45348
-3	8	1	61421
-4	4	1	124897
-5	24	1	158926
-6	17	1	62509
-7	5	1	172167
-8	13	7	1607
-9	9	1	39801
-10	10	1	10144
-11	3	1	128620
-12	14	1	122451
-13	12	1	187642
-14	6	1	34029
-15	7	1	34085
-16	13	1	108248
-17	16	1	116658
-18	15	1	148478
-19	18	1	216956
-20	19	1	111123
-21	20	1	197345
-22	14	1	29139
-23	21	1	87901
-24	22	1	52089
-25	25	1	108903
-26	4	2	5340
-27	19	9	4853
-28	16	4	3672
-29	3	1	128620
-30	9	6	5552
-31	8	7	57887
-32	3	4	6876
-33	19	5	94097
-34	23	7	7587
-35	11	8	85787
-36	17	3	134352
-37	1	2	2491
-38	9	5	64831
+1	1	48915
+2	5	45348
+8	1	61421
+4	1	124897
+24	2	158926
+17	1	62509
+5	1	172167
+13	7	1607
+9	1	39801
+10	1	10144
+3	1	128620
+14	1	122451
+12	1	187642
+6	1	34029
+7	2	34085
+13	1	108248
+16	1	116658
+15	1	148478
+18	1	216956
+19	2	111123
+20	1	197345
+14	1	29139
+21	2	87901
+22	1	52089
+25	1	108903
+4	2	5340
+19	9	4853
+16	4	3672
+3	1	128620
+9	6	5552
+8	7	57887
+3	4	6876
+19	5	94097
+23	7	7587
+11	8	85787
+17	3	134352
+1	2	2491
+9	5	64831
 \.
 
 
-
-
-
-ALTER TABLE ONLY brightness
-    ADD CONSTRAINT brightness_pk PRIMARY KEY (brightness_id);
+SELECT pg_catalog.setval('stars_star_id_seq', 25, true);
 
 
 ALTER TABLE ONLY brightness
     ADD CONSTRAINT brightness_visible_mag_key UNIQUE (visible_mag);
+    
+    
+ALTER TABLE ONLY brightness
+    ADD CONSTRAINT brightness_pk PRIMARY KEY (brightness_id);
 
 
 
@@ -383,16 +452,14 @@ ALTER TABLE ONLY constellations
 
 
 
-
-ALTER TABLE ONLY star_types
-    ADD CONSTRAINT star_types_pk PRIMARY KEY (star_type_id);
-
-
 ALTER TABLE ONLY star_types
     ADD CONSTRAINT star_types_type_name_key UNIQUE (type_name);
 
 
-
+ALTER TABLE ONLY star_types
+    ADD CONSTRAINT star_types_pk PRIMARY KEY (star_type_id);
+    
+    
 
 
 ALTER TABLE ONLY stars_brightness_relationships
@@ -423,12 +490,13 @@ ALTER TABLE ONLY stars_catalogues_relationships
 
 
 
-ALTER TABLE ONLY stars
-    ADD CONSTRAINT stars_pk PRIMARY KEY (star_id);
-
 
 ALTER TABLE ONLY stars
     ADD CONSTRAINT stars_star_name_key UNIQUE (star_name);
+
+
+ALTER TABLE ONLY stars
+    ADD CONSTRAINT stars_pk PRIMARY KEY (star_id);
 
 
 ALTER TABLE ONLY stars
