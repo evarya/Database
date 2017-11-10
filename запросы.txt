@@ -1,25 +1,25 @@
-Простые
+РџСЂРѕСЃС‚С‹Рµ
 
-Выбирает по одной звезде из каждого созвездия
+Р’С‹Р±РёСЂР°РµС‚ РїРѕ РѕРґРЅРѕР№ Р·РІРµР·РґРµ РёР· РєР°Р¶РґРѕРіРѕ СЃРѕР·РІРµР·РґРёСЏ
 
 SELECT DISTINCT ON (Constellation_ID) * FROM Stars ORDER BY Constellation_ID
 
 
 
-Выбирает положительный блеск, сортирует по возрастанию
+Р’С‹Р±РёСЂР°РµС‚ РїРѕР»РѕР¶РёС‚РµР»СЊРЅС‹Р№ Р±Р»РµСЃРє, СЃРѕСЂС‚РёСЂСѓРµС‚ РїРѕ РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ
 
 SELECT * FROM Brightness WHERE Visible_Mag>0
 ORDER BY Visible_Mag
 
 
 
-Выбирает все созвездия начинающиеся на "С"
+Р’С‹Р±РёСЂР°РµС‚ РІСЃРµ СЃРѕР·РІРµР·РґРёСЏ РЅР°С‡РёРЅР°СЋС‰РёРµСЃСЏ РЅР° "РЎ"
  
 SELECT * FROM Constellations WHERE Constellation_name LIKE 'C%'
 
 
 
-Подсчитывает количество переменных и непеременных звезд
+РџРѕРґСЃС‡РёС‚С‹РІР°РµС‚ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂРµРјРµРЅРЅС‹С… Рё РЅРµРїРµСЂРµРјРµРЅРЅС‹С… Р·РІРµР·Рґ
 
 SELECT count(s.Star_ID) AS "nuber of stars",
 s.Variable_star AS "Variable_star"
@@ -28,10 +28,10 @@ GROUP BY s.Variable_star
 
 
 
-Средние
+РЎСЂРµРґРЅРёРµ
 
 
-Возвращает таблицу Stars, заменяя в ней ID созвездия и типа звезды на соответствующие названия из таблиц Constellations и Star_types
+Р’РѕР·РІСЂР°С‰Р°РµС‚ С‚Р°Р±Р»РёС†Сѓ Stars, Р·Р°РјРµРЅСЏСЏ РІ РЅРµР№ ID СЃРѕР·РІРµР·РґРёСЏ Рё С‚РёРїР° Р·РІРµР·РґС‹ РЅР° СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёРµ РЅР°Р·РІР°РЅРёСЏ РёР· С‚Р°Р±Р»РёС† Constellations Рё Star_types
 
 SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation
 FROM Stars AS s LEFT OUTER JOIN Constellations AS c 
@@ -40,7 +40,7 @@ LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
 
 
 
-Выводит по одной звезде для каждого значения блеска, сортируя записи по возрастанию блеска.
+Р’С‹РІРѕРґРёС‚ РїРѕ РѕРґРЅРѕР№ Р·РІРµР·РґРµ РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ Р±Р»РµСЃРєР°, СЃРѕСЂС‚РёСЂСѓСЏ Р·Р°РїРёСЃРё РїРѕ РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ Р±Р»РµСЃРєР°.
 
 SELECT DISTINCT ON (Visible_Mag) s.Star_ID,Star_name,Visible_Mag AS Brightness
 FROM Stars AS s INNER JOIN Stars_Brightness_relationships AS sb 
@@ -50,7 +50,7 @@ ORDER BY Visible_Mag
 
 
 
-Выбирает все звезды отсортированные по алфавиту, для которых имеются записи о номере в каталоге(ах), номер звезды в каталоге, название и абревиатуру соответствующего католога. 
+Р’С‹Р±РёСЂР°РµС‚ РІСЃРµ Р·РІРµР·РґС‹ РѕС‚СЃРѕСЂС‚РёСЂРѕРІР°РЅРЅС‹Рµ РїРѕ Р°Р»С„Р°РІРёС‚Сѓ, РґР»СЏ РєРѕС‚РѕСЂС‹С… РёРјРµСЋС‚СЃСЏ Р·Р°РїРёСЃРё Рѕ РЅРѕРјРµСЂРµ РІ РєР°С‚Р°Р»РѕРіРµ(Р°С…), РЅРѕРјРµСЂ Р·РІРµР·РґС‹ РІ РєР°С‚Р°Р»РѕРіРµ, РЅР°Р·РІР°РЅРёРµ Рё Р°Р±СЂРµРІРёР°С‚СѓСЂСѓ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРіРѕ РєР°С‚РѕР»РѕРіР°. 
 
 SELECT s.Star_ID,Star_name,NumInCat,Catalogue_name,Abbreviation
 FROM Stars AS s INNER JOIN Stars_Catalogues_relationships AS sc 
@@ -60,10 +60,11 @@ ORDER BY Star_name
 
 
 
-Подсчитывает колличество звезд в каждом существующем каталоге и колличество звезд, не связанных ни с одни из каталогов
+РџРѕРґСЃС‡РёС‚С‹РІР°РµС‚ РєРѕР»Р»РёС‡РµСЃС‚РІРѕ Р·РІРµР·Рґ РІ РєР°Р¶РґРѕРј СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРј РєР°С‚Р°Р»РѕРіРµ Рё РєРѕР»Р»РёС‡РµСЃС‚РІРѕ Р·РІРµР·Рґ, РЅРµ СЃРІСЏР·Р°РЅРЅС‹С… РЅРё СЃ РѕРґРЅРё РёР· РєР°С‚Р°Р»РѕРіРѕРІ
 
 SELECT count(s.Star_ID),Catalogue_name AS "Catalogue",Abbreviation 
 FROM Stars AS s FULL OUTER JOIN Stars_Catalogues_relationships AS sc 
 ON s.Star_ID=sc.Star_ID
 FULL OUTER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
 GROUP BY Catalogue_name, Abbreviation
+
