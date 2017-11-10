@@ -1,0 +1,69 @@
+Простые
+
+Выбирает по одной звезде из каждого созвездия
+
+SELECT DISTINCT ON (Constellation_ID) * FROM Stars ORDER BY Constellation_ID
+
+
+
+Выбирает положительный блеск, сортирует по возрастанию
+
+SELECT * FROM Brightness WHERE Visible_Mag>0
+ORDER BY Visible_Mag
+
+
+
+Выбирает все созвездия начинающиеся на "С"
+ 
+SELECT * FROM Constellations WHERE Constellation_name LIKE 'C%'
+
+
+
+Подсчитывает количество переменных и непеременных звезд
+
+SELECT count(s.Star_ID) AS "nuber of stars",
+s.Variable_star AS "Variable_star"
+FROM Stars AS s
+GROUP BY s.Variable_star
+
+
+
+Средние
+
+
+Возвращает таблицу Stars, заменяя в ней ID созвездия и типа звезды на соответствующие названия из таблиц Constellations и Star_types
+
+SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation
+FROM Stars AS s LEFT OUTER JOIN Constellations AS c 
+ON s.Constellation_ID=c.Constellation_ID
+LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
+
+
+
+Выводит по одной звезде для каждого значения блеска, сортируя записи по возрастанию блеска.
+
+SELECT DISTINCT ON (Visible_Mag) s.Star_ID,Star_name,Visible_Mag AS Brightness
+FROM Stars AS s INNER JOIN Stars_Brightness_relationships AS sb 
+ON s.Star_ID=sb.Star_ID
+INNER JOIN Brightness AS b ON sb.Brightness_ID=b.Brightness_ID
+ORDER BY Visible_Mag
+
+
+
+Выбирает все звезды отсортированные по алфавиту, для которых имеются записи о номере в каталоге(ах), номер звезды в каталоге, название и абревиатуру соответствующего католога. 
+
+SELECT s.Star_ID,Star_name,NumInCat,Catalogue_name,Abbreviation
+FROM Stars AS s INNER JOIN Stars_Catalogues_relationships AS sc 
+ON s.Star_ID=sc.Star_ID
+INNER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
+ORDER BY Star_name
+
+
+
+Подсчитывает колличество звезд в каждом существующем каталоге и колличество звезд, не связанных ни с одни из каталогов
+
+SELECT count(s.Star_ID),Catalogue_name AS "Catalogue",Abbreviation 
+FROM Stars AS s FULL OUTER JOIN Stars_Catalogues_relationships AS sc 
+ON s.Star_ID=sc.Star_ID
+FULL OUTER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
+GROUP BY Catalogue_name, Abbreviation
