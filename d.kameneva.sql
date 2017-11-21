@@ -375,7 +375,7 @@ COPY stars_catalogues_relationships (star_id, catalogue_id, numincat) FROM stdin
 24	2	158926
 17	1	62509
 5	1	172167
-13	7	1607
+13	5	1607
 9	1	39801
 10	1	10144
 3	1	128620
@@ -396,7 +396,7 @@ COPY stars_catalogues_relationships (star_id, catalogue_id, numincat) FROM stdin
 4	2	5340
 19	9	4853
 16	4	3672
-3	1	128620
+13	7	128620
 9	6	5552
 8	7	57887
 3	4	6876
