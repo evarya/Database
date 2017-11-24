@@ -117,7 +117,7 @@ SELECT * FROM Constellations WHERE Constellation_name LIKE 'C%'
 __________
 Подсчитывает количество непеременных звезд
 
-SELECT count(s.Star_ID) AS "nuber of stars",
+SELECT count(s.Star_ID) AS "number of stars",
 s.Variable_star AS "Variable_star"
 FROM Stars AS s WHERE s.Variable_star='no'
 GROUP BY s.Variable_star 
@@ -126,7 +126,7 @@ GROUP BY s.Variable_star
 
 CREATE INDEX ON Stars(Variable_star) WHERE Variable_star='no';
 EXPLAIN (ANALYZE) 
-SELECT count(s.Star_ID) AS "nuber of stars",
+SELECT count(s.Star_ID) AS "number of stars",
 s.Variable_star AS "Variable_star"
 FROM Stars AS s WHERE s.Variable_star='no'
 GROUP BY s.Variable_star 
@@ -183,7 +183,7 @@ LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
 
 CREATE INDEX ON Stars (Star_ID) ;
 EXPLAIN (ANALYZE) 
-SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation
+SELECT s.Star_ID,s.Star_name,s.Spectral_type,s.Variable_star,t.Type_name AS Star_Type, c.Constellation_name AS Constellation
 FROM Stars AS s LEFT OUTER JOIN Constellations AS c 
 ON s.Constellation_ID=c.Constellation_ID
 LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
@@ -223,7 +223,7 @@ LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
 _____________
 Выводит по одной звезде для каждого значения блеска, сортируя записи по возрастанию блеска.
 
-SELECT DISTINCT ON (Visible_Mag) s.Star_ID,Star_name,Visible_Mag AS Brightness
+SELECT DISTINCT ON (Visible_Mag) s.Star_ID,s.Star_name,b.Visible_Mag AS Brightness
 FROM Stars AS s INNER JOIN Stars_Brightness_relationships AS sb 
 ON s.Star_ID=sb.Star_ID
 INNER JOIN Brightness AS b ON sb.Brightness_ID=b.Brightness_ID
@@ -291,7 +291,7 @@ ORDER BY Visible_Mag
 ______________
 Выбирает все звезды отсортированные по алфавиту, для которых имеются записи о номере в каталоге(ах), номер звезды в каталоге, название и абревиатуру соответствующего католога. 
 
-SELECT s.Star_ID,Star_name,NumInCat,Catalogue_name,Abbreviation
+SELECT s.Star_ID,s.Star_name,sc.NumInCat,c.Catalogue_name,c.Abbreviation
 FROM Stars AS s INNER JOIN Stars_Catalogues_relationships AS sc 
 ON s.Star_ID=sc.Star_ID
 INNER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
@@ -354,7 +354,7 @@ ORDER BY Star_name
 _______________
 Подсчитывает колличество звезд в каждом существующем каталоге и колличество звезд, не связанных ни с одни из каталогов
 
-SELECT count(s.Star_ID),Catalogue_name AS "Catalogue",Abbreviation 
+SELECT count(s.Star_ID),c.Catalogue_name AS "Catalogue",c.Abbreviation 
 FROM Stars AS s FULL OUTER JOIN Stars_Catalogues_relationships AS sc 
 ON s.Star_ID=sc.Star_ID
 FULL OUTER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
@@ -423,23 +423,23 @@ _______________________________________________
 
 Определяет самый распространенный тип звёзд, выводит его название и кол-во звезд этого типа. (если несколько типов имеют равное кол-во звёзд - выводит их все)
 
-WITH Toptype (Star_type, st_in_type) AS (SELECT st.type_name AS star_type, count(s.Star_ID) AS st_in_type
+WITH Toptype (Star_type, stars_in_type) AS (SELECT st.type_name AS star_type, count(s.Star_ID) 
              FROM Stars AS s FULL OUTER JOIN Star_types AS st 
              ON s.Star_type_ID=st.Star_type_ID
              GROUP BY type_name)
 SELECT *  FROM Toptype 
-WHERE (st_in_type = (SELECT MAX(st_in_type) FROM Toptype))
+WHERE (stars_in_type = (SELECT MAX(stars_in_type) FROM Toptype))
 
 
 
 
 Возвращает данные таблицы Stars для всех бинарных звёзд, принадлежащих созвездиям, начинающимся с буквы C, заменяя ID созвездия и типа звезды на соответствующие названия из таблиц Constellations и Star_types
 
-SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation 
+SELECT s.Star_ID,s.Star_name,s.Spectral_type,s.Variable_star,t.Type_name AS Star_Type, c.Constellation_name AS Constellation 
 FROM ( Stars AS s INNER JOIN Constellations AS c 
 ON (s.Constellation_ID=c.Constellation_ID AND Constellation_name LIKE 'C%')
 INNER JOIN Star_types AS t ON (s.Star_type_ID=t.Star_type_ID AND Type_name='star'))
-GROUP BY constellation,Star_ID,Star_name,Spectral_type,Variable_star,Type_name
+GROUP BY c.Constellation_name,s.Star_ID,s.Star_name,s.Spectral_type,s.Variable_star,t.Type_name
 
 
 
