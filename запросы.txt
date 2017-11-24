@@ -1,36 +1,176 @@
-Простые
-
+____________________Простые______________
+__________
 Выбирает по одной звезде из каждого созвездия
 
 SELECT DISTINCT ON (Constellation_ID) * FROM Stars ORDER BY Constellation_ID
 
+Оптимизация: Был добавлен индекс для осуществления фильтрации по id созвездия
 
+CREATE INDEX ON Stars(Constellation_ID);
+EXPLAIN (ANALYZE) SELECT DISTINCT ON (Constellation_ID) * 
+FROM Stars ORDER BY Constellation_ID
+
+До оптимизации:  
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+Unique  (cost=1.83..1.96 rows=25 width=77) (actual time=0.263..0.292 rows=18 loops=1)
+   ->  Sort  (cost=1.83..1.89 rows=25 width=77) (actual time=0.262..0.267 rows=25 loops=1)
+         Sort Key: constellation_id
+         Sort Method: quicksort  Memory: 18kB
+         ->  Seq Scan on stars  (cost=0.00..1.25 rows=25 width=77) (actual time=0.144..0.150 rows=25 loops=1)
+ Planning time: 13.649 ms
+ Execution time: 0.463 ms
+(7 строк)
+
+
+После оптимизации:
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Unique  (cost=1.83..1.96 rows=25 width=77) (actual time=0.054..0.074 rows=18 loops=1)
+   ->  Sort  (cost=1.83..1.89 rows=25 width=77) (actual time=0.052..0.055 rows=25 loops=1)
+         Sort Key: constellation_id
+         Sort Method: quicksort  Memory: 18kB
+         ->  Seq Scan on stars  (cost=0.00..1.25 rows=25 width=77) (actual time=0.012..0.017 rows=25 loops=1)
+ Planning time: 2.268 ms
+ Execution time: 0.166 ms
+(7 строк)
+
+время выполнения запроса уменьшилось примерно в три раза
+
+________
 
 Выбирает положительный блеск, сортирует по возрастанию
 
 SELECT * FROM Brightness WHERE Visible_Mag>0
 ORDER BY Visible_Mag
 
+Оптимизация: Был добавлен индекс для осуществления фильтрации по блеску с условием по величине блеска
+
+CREATE INDEX ON Brightness(Visible_Mag) WHERE Visible_Mag>0;
+SET enable_seqscan TO off;
+EXPLAIN (ANALYZE) SELECT * FROM Brightness WHERE Visible_Mag>0
+ORDER BY Visible_Mag
+
+До оптимизации:  
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Sort  (cost=1.41..1.43 rows=8 width=36) (actual time=0.223..0.227 rows=19 loops=1)
+   Sort Key: visible_mag
+   Sort Method: quicksort  Memory: 17kB
+   ->  Seq Scan on brightness  (cost=0.00..1.29 rows=8 width=36) (actual time=0.104..0.124 rows=19 loops=1)
+         Filter: (visible_mag > '0'::numeric)
+         Rows Removed by Filter: 4
+ Planning time: 3.431 ms
+ Execution time: 0.290 ms
+(8 строк)
+
+После оптимизации:  
+
+                                                QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Index Scan using brightness_visible_mag_idx2 on brightness  (cost=0.14..8.28 rows=8 width=36) (actual time=0.091..0.103 rows=19 loops=1)
+   Index Cond: (visible_mag > '0'::numeric)
+ Planning time: 2.300 ms
+ Execution time: 0.156 ms
+(4 строки)
 
 
+время выполнения запроса уменьшилось примерно в два раза
+
+
+
+_________
 Выбирает все созвездия начинающиеся на "С"
  
 SELECT * FROM Constellations WHERE Constellation_name LIKE 'C%'
 
+Оптимизация: Был добавлен индекс для осуществления фильтрации по названию созвездия с условием на первую букву созвездия
+
+CREATE INDEX ON Constellations(Constellation_name text_pattern_ops)  WHERE Constellation_name LIKE 'C%';
+EXPLAIN (ANALYZE) 
+SELECT * FROM Constellations WHERE Constellation_name LIKE 'C%'
+
+До оптимизации: 
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Seq Scan on constellations  (cost=10000000000.00..10000000025.88 rows=6 width=36) (actual time=2.895..2.911 rows=6 loops=1)
+   Filter: (constellation_name ~~ 'C%'::text)
+   Rows Removed by Filter: 12
+ Planning time: 38.984 ms
+ Execution time: 2.974 ms
+(5 строк)
 
 
-Подсчитывает количество переменных и непеременных звезд
+После оптимизации: 
+                                                 QUERY PLAN                                       
+-------------------------------------------------------------------------------------------------------------
+ Index Scan using constellations_constellation_name_idx1 on constellations  (cost=0.13..8.15 rows=1 width=36) (actual time=0.096..0.103 rows=6 loops=1)
+   Index Cond: ((constellation_name ~>=~ 'C'::text) AND (constellation_name ~<~ 'D'::text))
+ Planning time: 2.259 ms
+ Execution time: 0.165 ms
+(4 строки)
+
+время выполнения запроса уменьшилось примерно в 18 раза
+
+__________
+Подсчитывает количество непеременных звезд
 
 SELECT count(s.Star_ID) AS "nuber of stars",
 s.Variable_star AS "Variable_star"
-FROM Stars AS s
-GROUP BY s.Variable_star
+FROM Stars AS s WHERE s.Variable_star='no'
+GROUP BY s.Variable_star 
+
+Оптимизация: Был добавлен индекс для осуществления фильтрации по блеску с условием на непеременность
+
+CREATE INDEX ON Stars(Variable_star) WHERE Variable_star='no';
+EXPLAIN (ANALYZE) 
+SELECT count(s.Star_ID) AS "nuber of stars",
+s.Variable_star AS "Variable_star"
+FROM Stars AS s WHERE s.Variable_star='no'
+GROUP BY s.Variable_star 
+
+
+До оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=0.14..8.32 rows=2 width=5) (actual time=3.100..3.100 rows=1 loops=1)
+   Group Key: variable_star
+   ->  Index Scan using stars_variable_star_idx2 on stars s  (cost=0.14..8.24 rows=12 width=5) (actual time=2.918..2.932 rows=14 loops=1)
+         Index Cond: (variable_star = false)
+ Planning time: 0.786 ms
+ Execution time: 3.207 ms
+(6 строк)
+
+После оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=0.14..8.32 rows=2 width=5) (actual time=0.101..0.101 rows=1 loops=1)
+   Group Key: variable_star
+   ->  Index Scan using stars_variable_star_idx3 on stars s  (cost=0.14..8.24 rows=12 width=5) (actual time=0.063..0.073 rows=14 loops=1)
+         Index Cond: (variable_star = false)
+ Planning time: 2.132 ms
+ Execution time: 0.187 ms
+(6 строк)
+
+
+время выполнения запроса уменьшилось примерно в 17 раза
 
 
 
+
+
+
+________________________________________________________
 Средние
+________________________________________________________
 
 
+
+________
 Возвращает таблицу Stars, заменяя в ней ID созвездия и типа звезды на соответствующие названия из таблиц Constellations и Star_types
 
 SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation
@@ -38,8 +178,49 @@ FROM Stars AS s LEFT OUTER JOIN Constellations AS c
 ON s.Constellation_ID=c.Constellation_ID
 LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
 
+Оптимизация: Был добавлен индекс для осуществления фильтрации по id звезды
 
 
+CREATE INDEX ON Stars (Star_ID) ;
+EXPLAIN (ANALYZE) 
+SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation
+FROM Stars AS s LEFT OUTER JOIN Constellations AS c 
+ON s.Constellation_ID=c.Constellation_ID
+LEFT OUTER JOIN Star_types AS t ON s.Star_type_ID=t.Star_type_ID
+
+До оптимизации: 
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=0.43..77.71 rows=25 width=133) (actual time=0.370..0.684 rows=25 loops=1)
+   ->  Merge Left Join  (cost=0.28..25.21 rows=25 width=105) (actual time=0.200..0.299 rows=25 loops=1)
+         Merge Cond: (s.constellation_id = c.constellation_id)
+         ->  Index Scan using stars_constellation_id_idx1 on stars s  (cost=0.14..12.51 rows=25 width=77) (actual time=0.111..0.131 rows=25 loops=1)
+         ->  Index Scan using constellations_pk on constellations c  (cost=0.14..12.41 rows=18 width=36) (actual time=0.078..0.098 rows=25 loops=1)
+   ->  Index Scan using star_types_pk on star_types t  (cost=0.15..2.09 rows=1 width=36) (actual time=0.012..0.013 rows=1 loops=25)
+         Index Cond: (s.star_type_id = star_type_id)
+ Planning time: 45.240 ms
+ Execution time: 2.279 ms
+(9 строк)
+
+После оптимизации: 
+
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=0.43..77.71 rows=25 width=133) (actual time=0.049..0.336 rows=25 loops=1)
+   ->  Merge Left Join  (cost=0.28..25.21 rows=25 width=105) (actual time=0.035..0.134 rows=25 loops=1)
+         Merge Cond: (s.constellation_id = c.constellation_id)
+         ->  Index Scan using stars_constellation_id_idx1 on stars s  (cost=0.14..12.51 rows=25 width=77) (actual time=0.020..0.036 rows=25 loops=1)
+         ->  Index Scan using constellations_pk on constellations c  (cost=0.14..12.41 rows=18 width=36) (actual time=0.007..0.027 rows=25 loops=1)
+   ->  Index Scan using star_types_pk on star_types t  (cost=0.15..2.09 rows=1 width=36) (actual time=0.005..0.006 rows=1 loops=25)
+         Index Cond: (s.star_type_id = star_type_id)
+ Planning time: 3.403 ms
+ Execution time: 0.478 ms
+(9 строк)
+
+
+
+_____________
 Выводит по одной звезде для каждого значения блеска, сортируя записи по возрастанию блеска.
 
 SELECT DISTINCT ON (Visible_Mag) s.Star_ID,Star_name,Visible_Mag AS Brightness
@@ -48,8 +229,66 @@ ON s.Star_ID=sb.Star_ID
 INNER JOIN Brightness AS b ON sb.Brightness_ID=b.Brightness_ID
 ORDER BY Visible_Mag
 
+Оптимизация: Было добавлено два индекса для осуществления фильтрации по id звезды и по блеску
 
 
+CREATE INDEX ON Stars(Star_ID) ;
+CREATE INDEX ON Brightness(Visible_Mag) ;
+EXPLAIN (ANALYZE) 
+SELECT DISTINCT ON (Visible_Mag) s.Star_ID,Star_name,Visible_Mag AS Brightness
+FROM Stars AS s INNER JOIN Stars_Brightness_relationships AS sb 
+ON s.Star_ID=sb.Star_ID
+INNER JOIN Brightness AS b ON sb.Brightness_ID=b.Brightness_ID
+ORDER BY Visible_Mag
+
+До оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Unique  (cost=86.90..87.06 rows=23 width=68) (actual time=4.729..4.762 rows=23 loops=1)
+   ->  Sort  (cost=86.90..86.98 rows=32 width=68) (actual time=4.727..4.729 rows=25 loops=1)
+         Sort Key: b.visible_mag
+         Sort Method: quicksort  Memory: 18kB
+         ->  Hash Join  (cost=13.06..86.10 rows=32 width=68) (actual time=4.282..4.620 rows=25 loops=1)
+               Hash Cond: (sb.brightness_id = b.brightness_id)
+               ->  Nested Loop  (cost=0.29..71.95 rows=282 width=40) (actual time=4.081..4.373 rows=25 loops=1)
+                     ->  Index Scan using stars_star_id_idx1 on stars s  (cost=0.14..12.51 rows=25 width=36) (actual time=0.167..0.198 rows=25 loops=1)
+                     ->  Index Only Scan using stars_brightness_relationships_pk on stars_brightness_relationships sb  (cost=0.16..2.27 rows=11 width=8) (actual time=0.158..0.159 rows=1 loops=25)
+                           Index Cond: (star_id = s.star_id)
+                           Heap Fetches: 25
+               ->  Hash  (cost=12.48..12.48 rows=23 width=36) (actual time=0.141..0.141 rows=23 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 5kB
+                     ->  Index Scan using brightness_visible_mag_idx on brightness b  (cost=0.14..12.48 rows=23 width=36) (actual time=0.068..0.094 rows=23 loops=1)
+ Planning time: 3.683 ms
+ Execution time: 5.043 ms
+(16 строк)
+
+
+После оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Unique  (cost=86.90..87.06 rows=23 width=68) (actual time=0.696..0.730 rows=23 loops=1)
+   ->  Sort  (cost=86.90..86.98 rows=32 width=68) (actual time=0.695..0.697 rows=25 loops=1)
+         Sort Key: b.visible_mag
+         Sort Method: quicksort  Memory: 18kB
+         ->  Hash Join  (cost=13.06..86.10 rows=32 width=68) (actual time=0.292..0.602 rows=25 loops=1)
+               Hash Cond: (sb.brightness_id = b.brightness_id)
+               ->  Nested Loop  (cost=0.29..71.95 rows=282 width=40) (actual time=0.154..0.418 rows=25 loops=1)
+                     ->  Index Scan using stars_star_id_idx2 on stars s  (cost=0.14..12.51 rows=25 width=36) (actual time=0.125..0.154 rows=25 loops=1)
+                     ->  Index Only Scan using stars_brightness_relationships_pk on stars_brightness_relationships sb  (cost=0.16..2.27 rows=11 width=8) (actual time=0.006..0.007 rows=1 loops=25)
+                           Index Cond: (star_id = s.star_id)
+                           Heap Fetches: 25
+               ->  Hash  (cost=12.48..12.48 rows=23 width=36) (actual time=0.113..0.113 rows=23 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 5kB
+                     ->  Index Scan using brightness_visible_mag_idx3 on brightness b  (cost=0.14..12.48 rows=23 width=36) (actual time=0.058..0.085 rows=23 loops=1)
+ Planning time: 5.054 ms
+ Execution time: 0.903 ms
+(16 строк)
+
+
+
+______________
 Выбирает все звезды отсортированные по алфавиту, для которых имеются записи о номере в каталоге(ах), номер звезды в каталоге, название и абревиатуру соответствующего католога. 
 
 SELECT s.Star_ID,Star_name,NumInCat,Catalogue_name,Abbreviation
@@ -58,8 +297,61 @@ ON s.Star_ID=sc.Star_ID
 INNER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
 ORDER BY Star_name
 
+Оптимизация: Был добавлен индекс для осуществления фильтрации по id звезды
 
 
+CREATE INDEX ON Stars(Star_ID) ;
+EXPLAIN (ANALYZE) 
+SELECT s.Star_ID,Star_name,NumInCat,Catalogue_name,Abbreviation
+FROM Stars AS s INNER JOIN Stars_Catalogues_relationships AS sc 
+ON s.Star_ID=sc.Star_ID
+INNER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
+ORDER BY Star_name
+
+
+До оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Sort  (cost=84.84..84.87 rows=11 width=104) (actual time=1.433..1.436 rows=25 loops=1)
+   Sort Key: s.star_name
+   Sort Method: quicksort  Memory: 18kB
+   ->  Hash Join  (cost=12.67..84.65 rows=11 width=104) (actual time=0.841..1.127 rows=25 loops=1)
+         Hash Cond: (sc.catalogue_id = c.catalogue_id)
+         ->  Nested Loop  (cost=0.29..71.20 rows=255 width=44) (actual time=0.758..0.996 rows=25 loops=1)
+               ->  Index Scan using stars_star_name_key on stars s  (cost=0.14..12.51 rows=25 width=36) (actual time=0.730..0.757 rows=25 loops=1)
+               ->  Index Scan using stars_catalogues_relationships_pk on stars_catalogues_relationships sc  (cost=0.15..2.25 rows=10 width=12) (actual time=0.006..0.007 rows=1 loops=25)
+                     Index Cond: (star_id = s.star_id)
+         ->  Hash  (cost=12.27..12.27 rows=9 width=68) (actual time=0.051..0.051 rows=9 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 5kB
+               ->  Index Scan using catalogues_catalogue_id_idx on catalogues c  (cost=0.14..12.27 rows=9 width=68) (actual time=0.012..0.025 rows=9 loops=1)
+ Planning time: 2.176 ms
+ Execution time: 1.628 ms
+(14 строк)
+
+После оптимизации: 
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Sort  (cost=84.84..84.87 rows=11 width=104) (actual time=0.538..0.541 rows=25 loops=1)
+   Sort Key: s.star_name
+   Sort Method: quicksort  Memory: 18kB
+   ->  Hash Join  (cost=12.67..84.65 rows=11 width=104) (actual time=0.124..0.429 rows=25 loops=1)
+         Hash Cond: (sc.catalogue_id = c.catalogue_id)
+         ->  Nested Loop  (cost=0.29..71.20 rows=255 width=44) (actual time=0.053..0.310 rows=25 loops=1)
+               ->  Index Scan using stars_star_name_key on stars s  (cost=0.14..12.51 rows=25 width=36) (actual time=0.031..0.065 rows=25 loops=1)
+               ->  Index Scan using stars_catalogues_relationships_pk on stars_catalogues_relationships sc  (cost=0.15..2.25 rows=10 width=12) (actual time=0.006..0.007 rows=1 loops=25)
+                     Index Cond: (star_id = s.star_id)
+         ->  Hash  (cost=12.27..12.27 rows=9 width=68) (actual time=0.047..0.047 rows=9 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 5kB
+               ->  Index Scan using catalogues_catalogue_id_idx on catalogues c  (cost=0.14..12.27 rows=9 width=68) (actual time=0.012..0.028 rows=9 loops=1)
+ Planning time: 3.644 ms
+ Execution time: 0.737 ms
+(14 строк)
+
+
+
+
+_______________
 Подсчитывает колличество звезд в каждом существующем каталоге и колличество звезд, не связанных ни с одни из каталогов
 
 SELECT count(s.Star_ID),Catalogue_name AS "Catalogue",Abbreviation 
@@ -68,3 +360,102 @@ ON s.Star_ID=sc.Star_ID
 FULL OUTER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
 GROUP BY Catalogue_name, Abbreviation
 
+
+Оптимизация: Был добавлен индекс для осуществления фильтрации по id звезды
+
+
+CREATE INDEX ON Stars(Star_ID) ;
+EXPLAIN (ANALYZE) 
+SELECT count(s.Star_ID),Catalogue_name AS "Catalogue",Abbreviation 
+FROM Stars AS s FULL OUTER JOIN Stars_Catalogues_relationships AS sc 
+ON s.Star_ID=sc.Star_ID
+FULL OUTER JOIN Catalogues AS c ON sc.Catalogue_ID=c.Catalogue_ID
+GROUP BY Catalogue_name, Abbreviation
+
+
+
+До оптимизации: 
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=211.93..219.73 rows=780 width=68) (actual time=1.606..1.618 rows=9 loops=1)
+   Group Key: c.catalogue_name, c.abbreviation
+   ->  Hash Full Join  (cost=69.89..196.63 rows=2040 width=68) (actual time=1.375..1.528 rows=33 loops=1)
+         Hash Cond: (sc.catalogue_id = c.catalogue_id)
+         ->  Merge Full Join  (cost=0.29..98.98 rows=2040 width=8) (actual time=1.168..1.275 rows=25 loops=1)
+               Merge Cond: (s.star_id = sc.star_id)
+               ->  Index Only Scan using stars_star_id_idx2 on stars s  (cost=0.14..12.51 rows=25 width=4) (actual time=0.581..0.598 rows=25 loops=1)
+                     Heap Fetches: 25
+               ->  Index Only Scan using stars_catalogues_relationships_pk on stars_catalogues_relationships sc  (cost=0.15..78.75 rows=2040 width=8) (actual time=0.579..0.618 rows=25 loops=1)
+                     Heap Fetches: 25
+         ->  Hash  (cost=59.85..59.85 rows=780 width=68) (actual time=0.190..0.190 rows=9 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 5kB
+               ->  Index Scan using catalogues_pk on catalogues c  (cost=0.15..59.85 rows=780 width=68) (actual time=0.158..0.170 rows=9 loops=1)
+ Planning time: 60.189 ms
+ Execution time: 1.856 ms
+(15 строк)
+
+После оптимизации: 
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=135.23..135.32 rows=9 width=68) (actual time=1.086..1.093 rows=9 loops=1)
+   Group Key: c.catalogue_name, c.abbreviation
+   ->  Hash Full Join  (cost=12.67..119.93 rows=2040 width=68) (actual time=0.839..1.006 rows=33 loops=1)
+         Hash Cond: (sc.catalogue_id = c.catalogue_id)
+         ->  Merge Full Join  (cost=0.29..98.98 rows=2040 width=8) (actual time=0.764..0.886 rows=25 loops=1)
+               Merge Cond: (s.star_id = sc.star_id)
+               ->  Index Only Scan using stars_star_id_idx4 on stars s  (cost=0.14..12.51 rows=25 width=4) (actual time=0.735..0.757 rows=25 loops=1)
+                     Heap Fetches: 25
+               ->  Index Only Scan using stars_catalogues_relationships_pk on stars_catalogues_relationships sc  (cost=0.15..78.75 rows=2040 width=8) (actual time=0.018..0.064 rows=25 loops=1)
+                     Heap Fetches: 25
+         ->  Hash  (cost=12.27..12.27 rows=9 width=68) (actual time=0.054..0.054 rows=9 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 5kB
+               ->  Index Scan using catalogues_catalogue_id_idx on catalogues c  (cost=0.14..12.27 rows=9 width=68) (actual time=0.020..0.035 rows=9 loops=1)
+ Planning time: 3.060 ms
+ Execution time: 1.318 ms
+(15 строк)
+
+
+
+_______________________________________________
+Сложные запросы
+_______________________________________________
+
+Определяет самый распространенный тип звёзд, выводит его название и кол-во звезд этого типа. (если несколько типов имеют равное кол-во звёзд - выводит их все)
+
+WITH Toptype (Star_type, st_in_type) AS (SELECT st.type_name AS star_type, count(s.Star_ID) AS st_in_type
+             FROM Stars AS s FULL OUTER JOIN Star_types AS st 
+             ON s.Star_type_ID=st.Star_type_ID
+             GROUP BY type_name)
+SELECT *  FROM Toptype 
+WHERE (st_in_type = (SELECT MAX(st_in_type) FROM Toptype))
+
+
+
+
+Возвращает данные таблицы Stars для всех бинарных звёзд, принадлежащих созвездиям, начинающимся с буквы C, заменяя ID созвездия и типа звезды на соответствующие названия из таблиц Constellations и Star_types
+
+SELECT Star_ID,Star_name,Spectral_type,Variable_star,Type_name AS Star_Type, Constellation_name AS Constellation 
+FROM ( Stars AS s INNER JOIN Constellations AS c 
+ON (s.Constellation_ID=c.Constellation_ID AND Constellation_name LIKE 'C%')
+INNER JOIN Star_types AS t ON (s.Star_type_ID=t.Star_type_ID AND Type_name='star'))
+GROUP BY constellation,Star_ID,Star_name,Spectral_type,Variable_star,Type_name
+
+
+
+
+Определяет самую яркую из имеющих блеск меньше 1 звезд звезду в созвездии, содержащем больше всего звезд. Возвращает ID и название созведия,кол-во звезд в этом созвездии, ID, имя и яркость звезды.
+
+WITH fin AS (WITH fir AS (WITH Topconst AS (SELECT c.Constellation_ID AS const_id,Constellation_name AS Constellation, count(Star_ID) AS st_in_const 
+                FROM Stars AS s FULL OUTER JOIN Constellations AS c 
+                ON s.Constellation_ID=c.Constellation_ID
+                GROUP BY Constellation,c.Constellation_ID)
+SELECT * FROM Topconst 
+WHERE (st_in_const = (SELECT max(st_in_const) FROM Topconst))),
+sec AS (WITH maxbrig  AS (SELECT s.Star_ID,s.Star_name,s.Constellation_ID as sid, b.Visible_Mag AS Brightness
+                FROM Stars AS s INNER JOIN Stars_Brightness_relationships AS sb 
+                ON s.Star_ID=sb.Star_ID 
+                INNER JOIN Brightness AS b ON (sb.Brightness_ID=b.Brightness_ID AND (b.Visible_Mag<=1)))
+SELECT * FROM maxbrig)
+SELECT const_id,Constellation,st_in_const,Star_ID,Star_name,Brightness FROM fir INNER JOIN sec ON const_id =sid )
+SELECT * FROM fin WHERE (Brightness = (SELECT max(Brightness) FROM fin))
