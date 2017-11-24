@@ -379,7 +379,7 @@ COPY stars_catalogues_relationships (star_id, catalogue_id, numincat) FROM stdin
 9	1	39801
 10	1	10144
 3	1	128620
-14	1	122451
+14	3	122451
 12	1	187642
 6	1	34029
 7	2	34085
